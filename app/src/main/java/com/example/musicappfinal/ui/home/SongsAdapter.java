@@ -18,14 +18,16 @@ import java.util.List;
 public class SongsAdapter extends RecyclerView.Adapter<SongsAdapter.SongsViewHolder> {
 
     List<Song> allSongs = new LinkedList<Song>();
+    private OnItemClickListenerAbhinav mListener;
 
     @NonNull
     @Override
     public SongsViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.single_song_in_recyclerview,parent, false);
-        SongsViewHolder svh = new SongsViewHolder(v);
+        SongsViewHolder svh = new SongsViewHolder(v, mListener);
         return svh;
     }
+
 
     @Override
     public void onBindViewHolder(@NonNull SongsViewHolder holder, int position) {
@@ -35,6 +37,9 @@ public class SongsAdapter extends RecyclerView.Adapter<SongsAdapter.SongsViewHol
 
     }
 
+    public void setOnItemClickListenerAbhinav(OnItemClickListenerAbhinav onItemClickListenerAbhinav){
+        this.mListener = onItemClickListenerAbhinav;
+    }
     public void setAllSongs(List<Song> songs){
         this.allSongs = songs;
         notifyDataSetChanged();
@@ -45,14 +50,29 @@ public class SongsAdapter extends RecyclerView.Adapter<SongsAdapter.SongsViewHol
         return allSongs.size();
     }
 
+    public interface OnItemClickListenerAbhinav{
+        void onItemClick(int position);
+    }
+
     class SongsViewHolder extends RecyclerView.ViewHolder{
         public TextView title;
         public TextView artist;
-        public SongsViewHolder(@NonNull View itemView) {
+        public SongsViewHolder(@NonNull View itemView, final OnItemClickListenerAbhinav listener) {
             super(itemView);
+
             title = itemView.findViewById(R.id.trackTitle);
             artist = itemView.findViewById(R.id.trackArtist);
-
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if(listener != null){
+                        int position = getAdapterPosition();
+                        if(position != RecyclerView.NO_POSITION){
+                            listener.onItemClick(position);
+                        }
+                    }
+                }
+            });
         }
     }
 }

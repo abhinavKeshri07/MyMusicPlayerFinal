@@ -58,8 +58,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        FavSongsViewModel testViewModel = ViewModelProviders.of(this).get(FavSongsViewModel.class);
-        testViewModel.refreshSongs();
+
 
         notificationManager = NotificationManagerCompat.from(this);
         Notification notification = new NotificationCompat.Builder(this, App.CHANNEL_1_ID)
@@ -91,6 +90,8 @@ public class MainActivity extends AppCompatActivity {
         else{
             requestStoragePermission();
         }
+        FavSongsViewModel testViewModel = ViewModelProviders.of(this).get(FavSongsViewModel.class);
+        testViewModel.refreshSongs();
 
     }
 

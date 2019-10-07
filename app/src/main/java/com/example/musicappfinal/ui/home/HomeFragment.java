@@ -23,6 +23,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,13 +38,15 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
+    private static final String TAG = "HomeFragment";
     private SongsAdapter songsAdapter;
+    
     private RecyclerView recyclerView;
     private AndroidViewModel viewModel;
     List<Song> songs;
 
     LinkedList<Song> ll;
-
+    
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 
@@ -53,7 +56,18 @@ public class HomeFragment extends Fragment {
         recyclerView = root.findViewById(R.id.homeRecyclerView);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(linearLayoutManager);
-        songsAdapter = new SongsAdapter();//this adapter will be set in GetAllSongsFromPhoneAsyncTask
+        songsAdapter = new SongsAdapter();
+        songsAdapter.setOnItemClickListenerAbhinav(new SongsAdapter.OnItemClickListenerAbhinav() {
+            @Override
+            public void onItemClick(int position) {
+                if(viewModel != null) {
+                    ((FavSongsViewModel) viewModel).setCurrentSong(2);
+                }
+                // Toast.makeText(getActivity(), "this position = " + String.valueOf(position), Toast.LENGTH_LONG).show();
+            }
+        });
+        recyclerView.setAdapter(songsAdapter);
+
 
         return root;
     }
@@ -61,20 +75,28 @@ public class HomeFragment extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
+        Log.d("OnActivityCreated", "onActivityCreated: was called");
         viewModel = ViewModelProviders.of(getActivity()).get(FavSongsViewModel.class);
         ((FavSongsViewModel) viewModel).getSongs().observe(getViewLifecycleOwner(), new Observer<List<Song>>() {
             @Override
             public void onChanged(List<Song> songs) {
                 songsAdapter.setAllSongs(songs);
-                songsAdapter.notifyDataSetChanged();
+                if(((FavSongsViewModel) viewModel).mediaPlayer != null){
+                    ((FavSongsViewModel) viewModel).mediaPlayer.stop();
+                    ((FavSongsViewModel) viewModel).mediaPlayer.release();
+                }
+                ((FavSongsViewModel) viewModel).mediaPlayer = MediaPlayer.create(getActivity().getApplicationContext(), Uri.parse(songs.get(2).SongData));
+                ((FavSongsViewModel) viewModel).mediaPlayer.start();
+                
             }
         });
 
-        ((FavSongsViewModel) viewModel).getCurrentSong().observe(getViewLifecycleOwner(), new Observer<Song>() {
+        ((FavSongsViewModel) viewModel).getCurrentSong().observe(getViewLifecycleOwner(), new Observer<Integer>() {
             @Override
-            public void onChanged(Song song) {
-                Toast.makeText(getActivity(), "Song was changed", Toast.LENGTH_LONG).show();
+            public void onChanged(Integer integer) {
+                //Reset the bottom Current song playing.
+
+                Log.d(TAG, "onChanged: of CurrentSong Update the bottom information of currently playing song.");
             }
         });
 

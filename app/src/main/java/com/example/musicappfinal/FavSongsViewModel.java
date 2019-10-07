@@ -3,10 +3,12 @@ package com.example.musicappfinal;
 import android.app.Application;
 import android.content.ContentResolver;
 import android.database.Cursor;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
@@ -17,6 +19,7 @@ import com.example.musicappfinal.database.FavSong;
 import com.example.musicappfinal.database.Song;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -24,14 +27,18 @@ import java.util.List;
 
 public class FavSongsViewModel extends AndroidViewModel {
     private DatabaseRepository databaseRepository;
-    private MutableLiveData<Song> CurrentSong = new MutableLiveData<>();
+    private MutableLiveData<Integer> CurrentSong = new MutableLiveData<>();
     private LiveData<List<FavSong>> allFavSongs;                          // this we get from database.
-    private static MutableLiveData<List<Song>> songs ;
-
+    private  MutableLiveData<List<Song>> songs ;
+    private ArrayList<Song> allSongs;
+    public MediaPlayer mediaPlayer;
+    private static final String TAG = "FavSongsViewModel";
     public FavSongsViewModel(Application application) {
         super(application);
         databaseRepository = new DatabaseRepository(application);
         allFavSongs = databaseRepository.getAllFavSongs();
+
+
     }
 
     public void insertFavSong(FavSong favSong) {
@@ -46,11 +53,12 @@ public class FavSongsViewModel extends AndroidViewModel {
         databaseRepository.deleteAllFavSongs();
     }
 
-    public void setCurrentSong(Song song) {
-        CurrentSong.setValue(song);
+    public void setCurrentSong(Integer songNumber) {
+        CurrentSong.setValue(songNumber);
     }
+    public Song getSongAtIndex(int i ){ return allSongs.get(i); }
 
-    public LiveData<Song> getCurrentSong() {
+    public LiveData<Integer> getCurrentSong() {
         return CurrentSong;
     }
 
@@ -65,9 +73,13 @@ public class FavSongsViewModel extends AndroidViewModel {
         if(songs == null){
             songs = new MutableLiveData<>();
             new GetAllSongsFromPhoneAysncTask(this).execute();
+
         }
+        Log.d(TAG, "getSongs: ");
         return songs;
+
     }
+
     static class GetAllSongsFromPhoneAysncTask extends AsyncTask<Void , Void, ArrayList<Song>>{
         private WeakReference<FavSongsViewModel> myWeakRef;
         GetAllSongsFromPhoneAysncTask(FavSongsViewModel favSongsViewModel){
@@ -76,7 +88,11 @@ public class FavSongsViewModel extends AndroidViewModel {
         @Override
         protected void onPostExecute(ArrayList<Song> songsResult) {
             super.onPostExecute(songsResult);
-            songs.postValue(songsResult);
+            FavSongsViewModel favSongsViewModel = myWeakRef.get();
+            favSongsViewModel.songs.postValue(songsResult);
+            favSongsViewModel.allSongs = songsResult;
+
+
         }
         public ArrayList<File> findSong(File root){
             ArrayList<File> at = new ArrayList<>();
@@ -124,8 +140,12 @@ public class FavSongsViewModel extends AndroidViewModel {
             ArrayList<File> al = findSong(Environment.getExternalStorageDirectory());
             for(int i= 0 ;i < al.size(); i++){
                 Song song = new Song();
-                song.SongData = al.toString();
+                song.SongData = al.get(i).toString();
+                song.SongTitle = al.get(i).getName();
+                song.SongArtist = al.get(i).getParent();
+                list.add(song);
             }
+
             return list;
 
         }
