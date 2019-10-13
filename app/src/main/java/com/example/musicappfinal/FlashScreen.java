@@ -20,7 +20,7 @@ public class FlashScreen extends AppCompatActivity {
             }
         }
         Handler handler = new Handler();
-        handler.postDelayed(new MyRunnable(), 2000);
+        handler.postDelayed(new MyRunnable(), 500);
 
     }
 

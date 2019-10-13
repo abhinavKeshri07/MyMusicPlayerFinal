@@ -13,6 +13,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,6 +25,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -31,39 +34,73 @@ import com.example.musicappfinal.FavSongsViewModel;
 import com.example.musicappfinal.R;
 import com.example.musicappfinal.database.Song;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
     private SongsAdapter songsAdapter;
-    
+
     private RecyclerView recyclerView;
     private AndroidViewModel viewModel;
+    private LinearLayout songInfoHome;
+    private TextView songInfoHomeTextView;
     List<Song> songs;
 
     LinkedList<Song> ll;
-    
+
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-
-
+        songInfoHomeTextView = root.findViewById(R.id.songInfoHomeTextView);
+        songInfoHome = root.findViewById(R.id.songInfoHome);
         recyclerView = root.findViewById(R.id.homeRecyclerView);
+        LinearLayout songInfoHome = root.findViewById(R.id.songInfoHome);
+        songInfoHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment);
+                    navController.navigate(R.id.action_nav_home_to_nav_gallery);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+            }
+        });
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(linearLayoutManager);
-        songsAdapter = new SongsAdapter();
+        songsAdapter = new SongsAdapter(this);
         songsAdapter.setOnItemClickListenerAbhinav(new SongsAdapter.OnItemClickListenerAbhinav() {
             @Override
             public void onItemClick(int position) {
-                if(viewModel != null) {
-                    ((FavSongsViewModel) viewModel).setCurrentSong(2);
+
+                ((FavSongsViewModel) viewModel).setCurrentSong(position);
+                Uri u = Uri.parse(((FavSongsViewModel) viewModel).allSongs.get(((FavSongsViewModel) viewModel).getCurrentSong().getValue()).SongData);
+                if (((FavSongsViewModel) viewModel).mediaPlayer == null) {
+                    Log.d(TAG, "onItemClick: if block");
+                } else if (((FavSongsViewModel) viewModel).mediaPlayer.isPlaying()) {
+                    ((FavSongsViewModel) viewModel).mediaPlayer.stop();
+                    ((FavSongsViewModel) viewModel).mediaPlayer.release();
+                    Log.d(TAG, "onItemClick: else if block");
                 }
-                // Toast.makeText(getActivity(), "this position = " + String.valueOf(position), Toast.LENGTH_LONG).show();
+                ((FavSongsViewModel) viewModel).mediaPlayer = MediaPlayer.create(getActivity().getApplicationContext(), u);
+                ((FavSongsViewModel) viewModel).mediaPlayer.start();
+                ((FavSongsViewModel) viewModel).mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        setOnCompletionListenerToMediaplayer();
+                    }
+                });
+                setupBottomInfo();
+
+                //Toast.makeText(getActivity(), "this position = " + String.valueOf(position), Toast.LENGTH_LONG).show();
             }
         });
         recyclerView.setAdapter(songsAdapter);
@@ -72,96 +109,63 @@ public class HomeFragment extends Fragment {
         return root;
     }
 
+    private void setOnCompletionListenerToMediaplayer() {
+        MediaPlayer mediaPlayer = ((FavSongsViewModel) viewModel).mediaPlayer;
+        if (mediaPlayer != null) {
+            if (((FavSongsViewModel) viewModel).repeat) {
+
+            } else if (((FavSongsViewModel) viewModel).Shuffle) {
+                ((FavSongsViewModel) viewModel).ShuffleSong();
+            } else {
+                ((FavSongsViewModel) viewModel).incrementSong();
+            }
+        }
+        Uri u = Uri.parse(((FavSongsViewModel)viewModel).allSongs.get(((FavSongsViewModel)viewModel).getCurrentSong().getValue()).SongData);
+        if(((FavSongsViewModel)viewModel).mediaPlayer != null){
+            ((FavSongsViewModel)viewModel).mediaPlayer.stop();
+            ((FavSongsViewModel)viewModel).mediaPlayer.release();
+        }
+        ((FavSongsViewModel)viewModel).mediaPlayer = MediaPlayer.create(getActivity().getApplication(), u);
+        ((FavSongsViewModel)viewModel).mediaPlayer.start();
+        ((FavSongsViewModel) viewModel).mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                setOnCompletionListenerToMediaplayer();
+            }
+        });
+    }
+
+
+    private void setupBottomInfo() {
+        songInfoHome.setVisibility(View.VISIBLE);
+        try {
+            songInfoHomeTextView.setText(((FavSongsViewModel) viewModel).allSongs.get(((FavSongsViewModel) viewModel).getCurrentSong().getValue()).SongTitle);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         Log.d("OnActivityCreated", "onActivityCreated: was called");
         viewModel = ViewModelProviders.of(getActivity()).get(FavSongsViewModel.class);
+        ((FavSongsViewModel) viewModel).getCurrentSong().observe(getViewLifecycleOwner(), new Observer<Integer>() {
+            @Override
+            public void onChanged(Integer integer) {
+                setupBottomInfo();
+            }
+        });
         ((FavSongsViewModel) viewModel).getSongs().observe(getViewLifecycleOwner(), new Observer<List<Song>>() {
             @Override
             public void onChanged(List<Song> songs) {
                 songsAdapter.setAllSongs(songs);
-                if(((FavSongsViewModel) viewModel).mediaPlayer != null){
-                    ((FavSongsViewModel) viewModel).mediaPlayer.stop();
-                    ((FavSongsViewModel) viewModel).mediaPlayer.release();
-                }
-                ((FavSongsViewModel) viewModel).mediaPlayer = MediaPlayer.create(getActivity().getApplicationContext(), Uri.parse(songs.get(2).SongData));
-                ((FavSongsViewModel) viewModel).mediaPlayer.start();
-                
             }
         });
 
-        ((FavSongsViewModel) viewModel).getCurrentSong().observe(getViewLifecycleOwner(), new Observer<Integer>() {
-            @Override
-            public void onChanged(Integer integer) {
-                //Reset the bottom Current song playing.
-
-                Log.d(TAG, "onChanged: of CurrentSong Update the bottom information of currently playing song.");
-            }
-        });
 
     }
-    /*
-    public static class GetAllSongsFromPhoneAsyncTask extends AsyncTask<Context, Void, List<Song>>{
-        private WeakReference<HomeFragment> homeFrag;
 
-        GetAllSongsFromPhoneAsyncTask(HomeFragment homeFragment){
-            homeFrag = new WeakReference<>(homeFragment);
-        }
-        protected void onPreExecute(){
-
-        }
-        protected void onPostExecute(List<Song> songs){
-            super.onPostExecute(songs);
-            HomeFragment hf = homeFrag.get();
-            if(hf == null){
-                return;
-            }
-            hf.songsAdapter.setAllSongs(songs);
-            hf.recyclerView.setAdapter(hf.songsAdapter);
-            hf.songs = songs;
-            if(hf.viewModel instanceof FavSongsViewModel){
-                ((FavSongsViewModel) hf.viewModel).setSongs(songs);
-            }
-
-
-        }
-        @RequiresApi(api = Build.VERSION_CODES.N)
-        @Override
-        protected List<Song> doInBackground(Context... context) {
-            List<Song> list = new LinkedList<>();
-            ContentResolver contentResolver;
-            contentResolver = context[0].getContentResolver();
-            Uri songUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-            Cursor songCursor = contentResolver.query(songUri,null,null,null,null);
-            if(songCursor!= null && songCursor.moveToFirst()){
-                int songId = songCursor.getColumnIndex(MediaStore.Audio.Media._ID);
-                int songTitle = songCursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
-                int songArtist = songCursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
-                int songIndex = songCursor.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED);
-                int songData = songCursor.getColumnIndex(MediaStore.Audio.Media.DATA);
-                do{
-                    Song song = new Song(songCursor.getLong(songId), songCursor.getString(songTitle), songCursor.getString(songArtist), songCursor.getLong(songIndex));
-                    song.setSongData(songCursor.getString(songData));
-                    list.add(song);
-
-                }while (songCursor.moveToNext());
-            }
-            ArrayList<Song> arrayList = new ArrayList<>();
-            arrayList.addAll(list);
-            arrayList.sort(new Comparator<Song>() {
-                @Override
-                public int compare(Song o1, Song o2) {
-                    return o1.SongTitle.compareTo(o2.SongTitle);
-                }
-            });
-            list = new LinkedList<>();
-            list.addAll(arrayList);
-
-            return list;
-        }
-    }
-
-     */
 
 }

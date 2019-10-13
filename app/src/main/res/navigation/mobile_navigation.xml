@@ -23,7 +23,11 @@
         android:id="@+id/nav_gallery"
         android:name="com.example.musicappfinal.ui.player.PlayerFragment"
         android:label="player"
-        tools:layout="@layout/fragment_player" />
+        tools:layout="@layout/fragment_player" >
+        <action
+            android:id="@+id/action_nav_gallery_to_nav_home"
+            app:destination="@id/nav_home" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_slideshow"

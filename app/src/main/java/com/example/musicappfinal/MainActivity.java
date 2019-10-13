@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
@@ -37,7 +38,8 @@ import android.view.Menu;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
-
+    private static final String SHARED_PREF = "player_state";
+    private static final String CURRENT_SONG = "current_song";
     private AppBarConfiguration mAppBarConfiguration;
     private NotificationManagerCompat notificationManager;
 
@@ -86,12 +88,13 @@ public class MainActivity extends AppCompatActivity {
         //checking for permissions
         if(ContextCompat.checkSelfPermission(this, permissions[0]) == PackageManager.PERMISSION_GRANTED){
             Toast.makeText(this, "Permissions were given", Toast.LENGTH_LONG).show();
+            FavSongsViewModel testViewModel = ViewModelProviders.of(this).get(FavSongsViewModel.class);
+            testViewModel.refreshSongs();
         }
         else{
             requestStoragePermission();
         }
-        FavSongsViewModel testViewModel = ViewModelProviders.of(this).get(FavSongsViewModel.class);
-        testViewModel.refreshSongs();
+
 
     }
 
@@ -145,6 +148,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d("MainActivity", "this activity got destoyed");
+        FavSongsViewModel favSongsViewModel = ViewModelProviders.of(this).get(FavSongsViewModel.class);
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF,MODE_PRIVATE);
+
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        try {
+            editor.putInt(CURRENT_SONG,favSongsViewModel.getCurrentSong().getValue());
+        }catch (NullPointerException e){
+            editor.putInt(CURRENT_SONG,-1);
+        }
+
+
+        editor.apply();
+
     }
 }
